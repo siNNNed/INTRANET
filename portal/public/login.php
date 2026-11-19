@@ -14,7 +14,7 @@ if (Auth::usuario() !== null) {
     Http::redirigir($destino);
 }
 
-$codigo = $_SESSION['flash_error'] ?? null;
+$codigo = (string) ($_SESSION['flash_error'] ?? '');   // '' = sin error (PHP 8.5 no acepta null como índice)
 $emailFlash = $_SESSION['flash_email'] ?? null;
 unset($_SESSION['flash_error'], $_SESSION['flash_email']);
 
@@ -28,7 +28,7 @@ $mensajes = [
     'sesion_expirada' => 'Su sesión se cerró por inactividad. Vuelva a ingresar.',
     'no_configurado'  => 'El inicio de sesión con Google todavía no está configurado. Contacte a TI.',
 ];
-$mensaje = isset($mensajes[$codigo])
+$mensaje = $codigo !== '' && isset($mensajes[$codigo])
     ? str_replace('{email}', $emailFlash !== null ? $emailFlash : 'indicada', $mensajes[$codigo])
     : null;
 
