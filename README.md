@@ -2,20 +2,41 @@
 
 Esta carpeta va completa en `C:\xampp\htdocs\INTRANET`.
 
-## 1. Base de datos
+## 1. Bases de datos
 
-1. En SQL Server Management Studio ejecute `sql\intranet_schema.sql` (versión 2.2). Crea la base `Intranet`.
-   Si ya había ejecutado una versión anterior, borre antes la base `Intranet`; todavía no tiene datos.
-2. Cree el usuario de la aplicación (cambie la contraseña):
+Hay una base por sistema: `Intranet` (usuarios, perfiles y accesos, esquema `seg`) y `Egresos`
+(todo lo de egresos, esquema `egr`). Egresos lee los usuarios de Intranet mediante sinónimos.
+
+1. En SQL Server Management Studio ejecute, **en este orden**:
+   1. `sql\intranet_schema.sql` (versión 3.0). Crea la base `Intranet`.
+   2. `sql\egresos_schema.sql` (versión 3.0). Crea la base `Egresos`. Si `Intranet` no existe, se detiene sin crear nada.
+
+   Si ejecutó una versión anterior, borre antes las bases `Intranet` y `Egresos`; todavía no tienen datos.
+2. Dé acceso al usuario de la aplicación en **las dos** bases. El login `intranet_app` ya existe; si
+   olvidó su contraseña, cámbiela con `ALTER LOGIN` (escríbala usted, no la pegue en el chat):
 
    ```sql
    USE master;
-   CREATE LOGIN intranet_app WITH PASSWORD = 'CambiaEstaClave_2026!', CHECK_POLICY = ON;
+   -- Solo si el login no existe:
+   -- CREATE LOGIN intranet_app WITH PASSWORD = 'CambiaEstaClave_2026!', CHECK_POLICY = ON;
+   -- Solo si olvidó la contraseña:
+   -- ALTER LOGIN intranet_app WITH PASSWORD = 'NuevaClave_2026!';
    GO
    USE Intranet;
    CREATE USER intranet_app FOR LOGIN intranet_app;
    ALTER ROLE db_owner ADD MEMBER intranet_app;   -- solo en desarrollo
    GO
+   USE Egresos;
+   CREATE USER intranet_app FOR LOGIN intranet_app;
+   ALTER ROLE db_owner ADD MEMBER intranet_app;   -- solo en desarrollo
+   GO
+   ```
+3. Verifique: `Intranet` debe tener 9 tablas en `seg` y `Egresos` 18 tablas en `egr`.
+
+   ```sql
+   SELECT 'Intranet' AS Base, COUNT(*) AS Tablas FROM Intranet.sys.tables WHERE SCHEMA_NAME(schema_id) = 'seg'
+   UNION ALL
+   SELECT 'Egresos', COUNT(*) FROM Egresos.sys.tables WHERE SCHEMA_NAME(schema_id) = 'egr';
    ```
 
 ## 2. Configuración
@@ -26,7 +47,7 @@ Copy-Item config\config.example.php config\config.php
 notepad config\config.php
 ```
 
-Complete al menos `db.pass` con la contraseña de `intranet_app`. Deje `google` vacío por ahora.
+Complete al menos `db.pass` con la contraseña de `intranet_app` (sirve para las dos bases; los nombres están en `db.bases`). Deje `google` vacío por ahora.
 
 ## 3. Apache
 

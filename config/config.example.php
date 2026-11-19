@@ -11,10 +11,16 @@ return [
     ],
 
     'db' => [
+        'servidor' => 'localhost',                 // instancia de SQL Server (ej. 'localhost' o 'SERVIDOR\\INSTANCIA')
         // TrustServerCertificate=1 solo en desarrollo, si SQL Server no tiene un certificado válido.
-        'dsn'  => 'sqlsrv:Server=localhost;Database=Intranet;TrustServerCertificate=1',
-        'user' => 'intranet_app',
-        'pass' => '',
+        'opciones' => 'TrustServerCertificate=1',
+        'user'     => 'intranet_app',              // el mismo usuario tiene acceso a todas las bases
+        'pass'     => '',
+        // Una base por sistema. La clave es el código del sistema; el valor, el nombre de la base.
+        'bases'    => [
+            'INTRANET' => 'Intranet',
+            'EGRESOS'  => 'Egresos',
+        ],
     ],
 
     // Rutas publicadas por Apache (ver apache/intranet.conf)

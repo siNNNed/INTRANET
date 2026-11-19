@@ -26,16 +26,17 @@ if (in_array($perfilEgresos, ['DIGITADOR', 'ADMIN'], true)) {
                 SUM(CASE WHEN EstadoId = 'DEVUELTO'  THEN 1 ELSE 0 END) AS Devueltos,
                 SUM(CASE WHEN EstadoId = 'PENDIENTE' THEN 1 ELSE 0 END) AS EnAprobacion
            FROM egr.Egresos WHERE CreadoPor = ?",
-        [$usuario['id']]
+        [$usuario['id']],
+        'EGRESOS'
     ) ?? [];
     $pendientes[] = ['icono' => 'edit',  'tono' => 'azul',    'texto' => 'Borradores por completar', 'n' => (int) ($c['Borradores'] ?? 0)];
     $pendientes[] = ['icono' => 'undo',  'tono' => 'naranjo', 'texto' => 'Devueltos para corregir',  'n' => (int) ($c['Devueltos'] ?? 0)];
     $pendientes[] = ['icono' => 'clock', 'tono' => 'amarillo','texto' => 'En aprobación',            'n' => (int) ($c['EnAprobacion'] ?? 0)];
 } elseif ($perfilEgresos === 'APROBADOR') {
-    $n = (int) Db::valor('SELECT COUNT(DISTINCT EgresoId) FROM egr.vw_PendientesAprobacion WHERE AprobadorId = ?', [$usuario['id']]);
+    $n = (int) Db::valor('SELECT COUNT(DISTINCT EgresoId) FROM egr.vw_PendientesAprobacion WHERE AprobadorId = ?', [$usuario['id']], 'EGRESOS');
     $pendientes[] = ['icono' => 'check', 'tono' => 'azul', 'texto' => 'Esperando su aprobación', 'n' => $n];
 } elseif ($perfilEgresos === 'TESORERIA') {
-    $n = (int) Db::valor("SELECT COUNT(*) FROM egr.Egresos WHERE EstadoId = 'APROBADO'");
+    $n = (int) Db::valor("SELECT COUNT(*) FROM egr.Egresos WHERE EstadoId = 'APROBADO'", [], 'EGRESOS');
     $pendientes[] = ['icono' => 'wallet', 'tono' => 'azul', 'texto' => 'Aprobados por pagar', 'n' => $n];
 }
 

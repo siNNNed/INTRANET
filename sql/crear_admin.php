@@ -16,8 +16,12 @@ if (PHP_SAPI !== 'cli') {
 
 $config = require __DIR__ . '/../config/config.php';
 
+$db  = $config['db'];
+$dsn = 'sqlsrv:Server=' . ($db['servidor'] ?? 'localhost') . ';Database=' . $db['bases']['INTRANET']
+     . (!empty($db['opciones']) ? ';' . $db['opciones'] : '');
+
 $pdo = new PDO(
-    $config['db']['dsn'],          // ej.: 'sqlsrv:Server=localhost;Database=Intranet;TrustServerCertificate=1'
+    $dsn,
     $config['db']['user'],
     $config['db']['pass'],
     [

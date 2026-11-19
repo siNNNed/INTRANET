@@ -8,7 +8,7 @@ Responder siempre en español.
 
 - Windows Server 2019, XAMPP con Apache y PHP 8.5.12 (Thread Safe x64).
 - PDO con driver `pdo_sqlsrv` (Microsoft Drivers for PHP for SQL Server 5.13.3, ODBC Driver 18 for SQL Server).
-- SQL Server 2019 Standard, base `Intranet`, intercalación `Modern_Spanish_CI_AS`. Login de la aplicación: `intranet_app` (nunca `sa`).
+- SQL Server 2019 Standard, **una base por sistema**: `Intranet` (seguridad común) y `Egresos`; intercalación `Modern_Spanish_CI_AS`. Login de la aplicación: `intranet_app` (nunca `sa`), con usuario en cada base.
 - Bootstrap 5, jQuery y AJAX. Los endpoints PHP en `api/` devuelven siempre JSON.
 - Composer: PhpSpreadsheet (Excel), Dompdf (PDF), PHPMailer (correo SMTP).
 
@@ -31,12 +31,12 @@ C:\xampp\htdocs\INTRANET\
 │   ├── views\       vistas de Egresos
 │   ├── src\Services\
 │   └── templates\   plantilla del PDF y del correo
-├── sql\             intranet_schema.sql, crear_admin.php
+├── sql\             intranet_schema.sql, egresos_schema.sql, crear_admin.php
 ├── docs\            documento de diseño (Markdown)
 └── vendor\          Composer (uno solo, compartido)
 ```
 
-Cada sistema nuevo se agrega como carpeta hermana de `egresos\`, con su `public\` y su esquema en la base.
+Cada sistema nuevo se agrega como carpeta hermana de `egresos\`, con su `public\`, su propia base de datos (`sql\<sistema>_schema.sql`) y su entrada en `db.bases` de `config.php`.
 
 ## Apache y URLs
 
@@ -81,12 +81,16 @@ Cada sistema nuevo se agrega como carpeta hermana de `egresos\`, con su `public\
 - Montos en `DECIMAL`, nunca `float`; en PHP como texto o con `bcmath`. Fechas enviadas a SQL siempre en `AAAA-MM-DD`.
 - Sobre JSON: `{"ok":true,"data":...}` o `{"ok":false,"error":{"codigo","mensaje","campos"}}`. HTTP 200, 400 validación, 401 sin sesión, 403 sin permiso o sin perfil, 409 conflicto, 500 error interno (detalle solo al log).
 - Errores de negocio de los procedimientos: `THROW 50001–50099`; PHP los traduce a 400/409 con el mensaje tal cual.
-- Cada sistema usa su esquema (`egr.` para Egresos) y lee la seguridad solo desde `seg.`.
+- Cada sistema usa su base y su esquema (`egr.` en la base Egresos) y lee la seguridad solo desde `seg.`.
+- Conexiones: `Db::fila/todas/valor/ejecutar($sql, $params, $base)`; `$base` por omisión `'INTRANET'`; para egresos, `'EGRESOS'`. Los nombres de las bases están en `config.php` → `db.bases`.
 
-## Base de datos (`sql/intranet_schema.sql`)
+## Bases de datos
 
-- `seg`: Usuarios, Cargos, Departamentos, Sistemas, Perfiles, UsuarioPerfiles, Comunicados, Bitacora, Parametros; vista `vw_AccesosUsuario`; función `fn_PortalUsuario`.
-- `egr`: catálogos (Monedas, TiposCambio, EstadosEgreso, TiposDocumento, FormasPago, Bancos, Destinos), maestros (Solicitantes, Proveedores, CuentasContables, Categorias, CentrosCosto, ReglasAprobacion), Egresos y seguimiento (EgresoAprobaciones, EgresoHistorial, EnviosCorreo), Parametros; vistas `vw_Aprobadores`, `vw_Egresos`, `vw_PendientesAprobacion`; procedimientos `sp_Egreso_Enviar`, `sp_Egreso_Resolver`, `sp_Egreso_Pagar`, `sp_Egreso_Anular`, `sp_Reglas_Simular`.
+Orden de instalación: `sql/intranet_schema.sql`, luego `sql/egresos_schema.sql`, luego `php sql/crear_admin.php`.
+
+- Base **Intranet**, esquema `seg`: Usuarios, Cargos, Departamentos, Sistemas, Perfiles, UsuarioPerfiles, Comunicados, Bitacora, Parametros; vista `vw_AccesosUsuario`; función `fn_PortalUsuario`.
+- Base **Egresos**, esquema `egr`: catálogos (Monedas, TiposCambio, EstadosEgreso, TiposDocumento, FormasPago, Bancos, Destinos), maestros (Solicitantes, Proveedores, CuentasContables, Categorias, CentrosCosto, ReglasAprobacion), Egresos y seguimiento (EgresoAprobaciones, EgresoHistorial, EnviosCorreo), Parametros; vistas `vw_Aprobadores`, `vw_Egresos`, `vw_PendientesAprobacion`; procedimientos `sp_Egreso_Enviar`, `sp_Egreso_Resolver`, `sp_Egreso_Pagar`, `sp_Egreso_Anular`, `sp_Reglas_Simular`.
+- En Egresos, el esquema `seg` contiene solo **sinónimos** a `Intranet.seg.*` (Usuarios, Cargos, Departamentos, Sistemas, Bitacora, vw_AccesosUsuario), para que vistas y procedimientos escriban `seg.Usuarios` igual que en Intranet. No hay claves foráneas entre bases: la existencia del usuario se valida en el código y en los procedimientos.
 - El primer administrador se crea con `php sql/crear_admin.php` (perfil ADMIN en INTRANET y en EGRESOS).
 
 ## Dominio de Egresos
