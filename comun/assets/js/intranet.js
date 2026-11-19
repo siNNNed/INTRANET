@@ -52,6 +52,18 @@
 
   Intranet.validar = {
     email: function (v) { return typeof v === 'string' && v.length <= 150 && /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(v); },
+    texto: function (v, min, max) { var n = $.trim(String(v || '')).length; return n >= min && n <= max; },
+    fecha: function (v) {
+      var m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(String(v || ''));
+      if (!m) { return false; }
+      var d = new Date(Date.UTC(+m[1], +m[2] - 1, +m[3]));
+      return d.getUTCFullYear() === +m[1] && d.getUTCMonth() === +m[2] - 1 && d.getUTCDate() === +m[3];
+    },
+    /** Correo de uno de los dominios (lista en minúsculas). */
+    emailDeDominio: function (v, dominios) {
+      if (!Intranet.validar.email(v)) { return false; }
+      return $.inArray(String(v).split('@').pop().toLowerCase(), dominios || []) !== -1;
+    },
     password: function (v) { return typeof v === 'string' && v.length >= 10 && /[A-Za-z]/.test(v) && /\d/.test(v); },
     rut: function (v) {
       var limpio = String(v || '').replace(/[^0-9kK]/g, '').toUpperCase();

@@ -121,7 +121,8 @@ Nunca usar la versión blanca sobre fondo claro.
 ## Estado actual
 
 - Etapa 1 (base del portal) generada: login con Google (OIDC + PKCE, sin librerías) y LOCAL, portada con sistemas, pendientes y comunicados, sin_perfil, logout, listado de usuarios en modo lectura (`/intranet/admin/`) y entrada provisional de Egresos.
-- Pendiente de la etapa 1: crear y editar usuarios, cargos, departamentos y accesos; publicar comunicados; cambio de contraseña de la cuenta LOCAL.
+- Administración de usuarios lista: `/intranet/admin/` (listado con filtros) y `admin/usuario.php` (crear/editar, accesos por sistema con vencimiento, actividad desde la bitácora); guarda `api/usuarios/guardar.php` con la lógica en `comun/src/Usuarios.php`. Un administrador no puede desactivarse, cambiar su forma de ingreso ni quitarse ADMIN de la intranet. Cambiar el correo borra `GoogleSub`.
+- Pendiente de la etapa 1: mantenedores de cargos y departamentos; publicar comunicados; cambio de contraseña de la cuenta LOCAL.
 - Nuevas páginas: `require dirname(__DIR__, N) . '/comun/src/bootstrap.php';`, luego `Auth::requireSistema('CODIGO')` y `View::render(vista, [...])`.
 
 ## Plan por etapas

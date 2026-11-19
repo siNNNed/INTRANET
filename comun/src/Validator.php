@@ -55,6 +55,22 @@ final class Validator
         return $dv === $esperado;
     }
 
+    /** Texto obligatorio, sin espacios sobrantes, entre $min y $max caracteres. */
+    public static function texto(string $valor, int $min, int $max): bool
+    {
+        $largo = mb_strlen(trim($valor));
+        return $largo >= $min && $largo <= $max;
+    }
+
+    /** Fecha real en formato AAAA-MM-DD. */
+    public static function fecha(string $valor): bool
+    {
+        if (preg_match('/^(\d{4})-(\d{2})-(\d{2})$/', $valor, $m) !== 1) {
+            return false;
+        }
+        return checkdate((int) $m[2], (int) $m[3], (int) $m[1]);
+    }
+
     /** Mínimo 10 caracteres con letras y números. */
     public static function password(string $valor): bool
     {

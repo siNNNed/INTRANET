@@ -183,6 +183,53 @@ a:hover { color: var(--acento-oscuro); }
 .pagina-error-caja pre { width: 100%; text-align: left; white-space: pre-wrap; font-size: 12px; background: #f9fafb; border: 1px solid var(--borde); border-radius: 8px; padding: 10px; }
 .pagina-error .btn { text-decoration: none; }
 
+/* ---------- Administración: filtros, tablas y formularios ---------- */
+.filtros { padding: 16px 20px; display: grid; grid-template-columns: repeat(auto-fit, minmax(170px, 1fr)); gap: 14px; align-items: end; }
+.filtros-botones { display: flex; gap: 8px; }
+.btn-enlace { background: none; border: 0; color: var(--texto-2); font-weight: 500; text-decoration: underline; padding: 0 8px; }
+.tabla { font-size: 13px; white-space: nowrap; }
+.tabla td, .tabla th { padding-top: 10px; padding-bottom: 10px; }
+.btn-icono { width: 32px; height: 32px; display: inline-flex; align-items: center; justify-content: center; border: 1px solid var(--borde); border-radius: 8px; color: var(--texto-2); background: #fff; text-decoration: none; }
+.btn-icono:hover { color: var(--acento); border-color: #c7d2fe; }
+.chip-google { background: #eef2ff; color: #1e40af; }
+.chip-ok { background: #e6f6ec; color: #166534; }
+.alerta-ok { background: #f0fdf4; border: 1px solid #bbf7d0; color: #166534; }
+
+.editor { display: flex; flex-wrap: wrap; gap: 20px; align-items: flex-start; }
+.editor-principal { flex: 999 1 560px; min-width: 0; display: flex; flex-direction: column; gap: 16px; }
+.editor-lateral { flex: 1 1 280px; display: flex; flex-direction: column; gap: 16px; }
+.editor-botones { display: flex; flex-wrap: wrap; gap: 10px; justify-content: flex-end; padding-top: 4px; }
+.seccion { padding: 20px 22px; display: flex; flex-direction: column; gap: 16px; }
+.seccion h2 { margin: 0; font-size: 15px; font-weight: 600; display: flex; align-items: center; gap: 10px; }
+.seccion-num { width: 24px; height: 24px; border-radius: 999px; background: var(--acento-suave); color: var(--acento-oscuro); font-size: 12px; font-weight: 700; display: inline-flex; align-items: center; justify-content: center; }
+.seccion-texto { margin: 0; font-size: 13px; color: var(--texto-2); line-height: 1.5; }
+.rejilla { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 16px; }
+.form-ayuda { font-size: 12px; color: var(--texto-3); margin-top: 4px; }
+.form-label-chica { display: block; font-size: 12px; color: var(--texto-3); margin-bottom: 4px; }
+.casilla { display: flex; gap: 10px; align-items: center; height: 40px; font-size: 14px; }
+.casilla input { width: 18px; height: 18px; accent-color: var(--acento); }
+.metodos { border: 0; padding: 0; margin: 0; display: flex; flex-direction: column; gap: 8px; }
+.metodo { display: flex; gap: 10px; align-items: flex-start; padding: 12px 14px; border: 1px solid var(--borde); border-radius: 10px; font-size: 13px; cursor: pointer; }
+.metodo input { margin-top: 2px; accent-color: var(--acento); }
+.metodo small { color: var(--texto-2); font-size: 13px; }
+.metodo:has(input:checked) { border: 1.5px solid var(--acento); background: #f5f8ff; }
+.metodos:disabled .metodo { cursor: default; opacity: .75; }
+.accesos { display: flex; flex-direction: column; }
+.acceso { display: grid; grid-template-columns: minmax(200px, 1.4fr) minmax(170px, 1fr) minmax(150px, .8fr); gap: 14px; align-items: start; padding: 14px 0; border-bottom: 1px solid #f0f1f3; }
+.acceso:last-child { border-bottom: 0; }
+.acceso-sistema { display: flex; flex-direction: column; gap: 2px; padding-top: 18px; }
+.acceso-sistema strong { font-size: 14px; }
+.acceso-sistema small { font-size: 12px; color: var(--texto-2); }
+.resumen { margin: 0; display: flex; flex-direction: column; gap: 10px; font-size: 13px; }
+.resumen div { display: flex; justify-content: space-between; gap: 12px; }
+.resumen dt { color: var(--texto-2); font-weight: 400; }
+.resumen dd { margin: 0; font-weight: 600; text-align: right; }
+.actividad { margin: 0; padding: 0; list-style: none; }
+.actividad li { display: flex; flex-direction: column; gap: 2px; padding: 10px 0; border-bottom: 1px solid #f0f1f3; font-size: 13px; }
+.actividad li:last-child { border-bottom: 0; }
+.actividad small { font-size: 12px; color: var(--texto-3); }
+@media (max-width: 720px) { .acceso { grid-template-columns: 1fr; } .acceso-sistema { padding-top: 0; } }
+
 @media (max-width: 640px) {
   .app-contenido { padding: 20px 16px 32px; }
   .app-cabecera { padding: 14px 16px; }
