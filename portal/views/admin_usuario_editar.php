@@ -1,21 +1,19 @@
 <?php
 /**
  * Crear o editar una cuenta. Variables: $u (null = nueva), $esPropia, $accesos, $sistemas,
- * $cargos, $departamentos, $dominios, $actividad.
+ * $cargos, $departamentos, $actividad.
  */
 use Intranet\View;
 
-$metodo  = $u['MetodoAcceso'] ?? 'GOOGLE';
+$sinClave = $u === null || (int) $u['SinClave'] === 1;
 $activo  = $u === null || (int) $u['Activo'] === 1;
 $sel     = static fn ($a, $b): string => (string) $a === (string) $b ? ' selected' : '';
 $fecha   = static fn ($v): string => $v ? date('d-m-Y H:i', strtotime((string) $v)) : '—';
-$arroba  = $dominios ? '@' . implode(' o @', $dominios) : '';
 ?>
 <div class="editor">
   <form id="form-usuario" class="editor-principal" novalidate
         data-url="<?= e(View::url('INTRANET', 'api/usuarios/guardar.php')) ?>"
-        data-dominios="<?= e(implode(',', $dominios)) ?>"
-        data-local-actual="<?= $metodo === 'LOCAL' && $u !== null ? '1' : '0' ?>">
+        data-pide-clave="<?= $sinClave ? '1' : '0' ?>">
     <input type="hidden" name="id" value="<?= (int) ($u['UsuarioId'] ?? 0) ?>">
 
     <div class="alerta alerta-error" id="form-error" role="alert" hidden><?= View::icono('alert', 16) ?><span data-texto></span></div>
@@ -30,7 +28,7 @@ $arroba  = $dominios ? '@' . implode(' o @', $dominios) : '';
         <div>
           <label class="form-label" for="u-email">Correo de la empresa *</label>
           <input class="form-control" id="u-email" name="email" type="email" maxlength="150" required autocomplete="off" value="<?= e($u['Email'] ?? '') ?>">
-          <div class="form-ayuda">Para ingresar con Google debe terminar en <?= e($arroba) ?>.</div>
+          <div class="form-ayuda">Es el usuario con que ingresará a la intranet.</div>
         </div>
         <div>
           <label class="form-label" for="u-rut">RUT</label>
@@ -60,38 +58,37 @@ $arroba  = $dominios ? '@' . implode(' o @', $dominios) : '';
         </div>
       </div>
 
-      <fieldset class="metodos"<?= $esPropia ? ' disabled' : '' ?>>
-        <legend class="form-label">Forma de ingreso *</legend>
-        <label class="metodo">
-          <input type="radio" name="metodo" value="GOOGLE"<?= $metodo === 'GOOGLE' ? ' checked' : '' ?>>
-          <span><strong>Cuenta de Google Workspace</strong><br><small>Entra con su correo <?= e($arroba) ?>. La intranet no guarda contraseña.</small></span>
-        </label>
-        <label class="metodo">
-          <input type="radio" name="metodo" value="LOCAL"<?= $metodo === 'LOCAL' ? ' checked' : '' ?>>
-          <span><strong>Cuenta local con contraseña</strong><br><small>Solo para la cuenta de emergencia de administradores.</small></span>
-        </label>
-      </fieldset>
-      <?php if ($esPropia): ?>
-        <input type="hidden" name="metodo" value="<?= e($metodo) ?>">
-        <div class="form-ayuda">No puede cambiar la forma de ingreso de su propia cuenta.</div>
-      <?php endif; ?>
-      <div class="invalid-feedback d-block" data-error="metodo"></div>
-
-      <div class="rejilla" id="bloque-clave" <?= $metodo === 'LOCAL' ? '' : 'hidden' ?>>
-        <div>
-          <label class="form-label" for="u-pass"><?= $metodo === 'LOCAL' && $u !== null ? 'Nueva contraseña' : 'Contraseña *' ?></label>
-          <input class="form-control" id="u-pass" name="password" type="password" maxlength="200" autocomplete="new-password">
-          <div class="form-ayuda"><?= $metodo === 'LOCAL' && $u !== null ? 'Déjela vacía para mantener la actual. ' : '' ?>Mínimo 10 caracteres, con letras y números.</div>
-        </div>
-        <div>
-          <label class="form-label" for="u-pass2">Repita la contraseña</label>
-          <input class="form-control" id="u-pass2" name="password2" type="password" maxlength="200" autocomplete="new-password">
-        </div>
-      </div>
     </section>
 
     <section class="tarjeta seccion">
-      <h2><span class="seccion-num">2</span>Accesos por sistema</h2>
+      <h2><span class="seccion-num">2</span>Contraseña</h2>
+      <?php if ($esPropia): ?>
+        <p class="seccion-texto">Su propia contraseña se cambia en <a href="<?= e(View::url('INTRANET', 'cambiar_clave.php')) ?>">Cambiar contraseña</a>.</p>
+      <?php else: ?>
+        <p class="seccion-texto">
+          <?php if ($u === null): ?>Asigne una contraseña inicial y entréguesela a la persona por un medio seguro.
+          <?php elseif ($sinClave): ?>Esta cuenta no tiene contraseña y no puede ingresar. Asígnele una.
+          <?php else: ?>Déjela vacía para mantener la actual. Si la persona la olvidó, asígnele una nueva aquí.<?php endif; ?>
+        </p>
+        <div class="rejilla">
+          <div>
+            <label class="form-label" for="u-pass"><?= $sinClave ? 'Contraseña inicial *' : 'Nueva contraseña' ?></label>
+            <input class="form-control" id="u-pass" name="password" type="password" maxlength="200" autocomplete="new-password">
+            <div class="form-ayuda">Mínimo 10 caracteres, con letras y números.</div>
+          </div>
+          <div>
+            <label class="form-label" for="u-pass2">Repita la contraseña</label>
+            <input class="form-control" id="u-pass2" name="password2" type="password" maxlength="200" autocomplete="new-password">
+          </div>
+        </div>
+        <label class="casilla">
+          <input type="checkbox" name="debe_cambiar" value="1" checked> Pedirle que la cambie la próxima vez que ingrese
+        </label>
+      <?php endif; ?>
+    </section>
+
+    <section class="tarjeta seccion">
+      <h2><span class="seccion-num">3</span>Accesos por sistema</h2>
       <p class="seccion-texto">Un perfil por sistema. "Sin acceso" quita el sistema: la persona lo sigue viendo en la portada, pero con candado. Deje la fecha vacía para que no venza.</p>
       <div class="accesos">
         <?php foreach ($sistemas as $sid => $s):
@@ -135,17 +132,14 @@ $arroba  = $dominios ? '@' . implode(' o @', $dominios) : '';
     <section class="tarjeta seccion">
       <h2>Resumen</h2>
       <dl class="resumen">
-        <div><dt>Ingreso</dt><dd><?= $metodo === 'GOOGLE' ? '<span class="chip chip-google">Google</span>' : '<span class="chip chip-gris">Local</span>' ?></dd></div>
-        <?php if ($metodo === 'GOOGLE'): ?>
-          <div><dt>Cuenta de Google vinculada</dt><dd><?= $u['GoogleSub'] ? 'Sí' : 'Aún no ingresa' ?></dd></div>
-        <?php endif; ?>
+        <div><dt>Contraseña</dt><dd><?= $sinClave ? '<span class="chip chip-error">Sin contraseña</span>' : ((int) $u['DebeCambiarPassword'] === 1 ? '<span class="chip chip-aviso">Debe cambiarla</span>' : 'Asignada') ?></dd></div>
         <div><dt>Último ingreso</dt><dd><?= e($fecha($u['UltimoAcceso'])) ?></dd></div>
         <div><dt>Creada</dt><dd><?= e($fecha($u['CreadoEn'])) ?></dd></div>
         <?php if ((int) $u['Bloqueado'] === 1): ?>
           <div><dt>Bloqueada hasta</dt><dd class="text-danger"><?= e($fecha($u['BloqueadoHasta'])) ?></dd></div>
         <?php endif; ?>
       </dl>
-      <?php if ((int) $u['Bloqueado'] === 1): ?><p class="seccion-texto">Bloqueada por intentos fallidos. Se desbloquea sola, o al guardar una nueva contraseña.</p><?php endif; ?>
+      <?php if ((int) $u['Bloqueado'] === 1): ?><p class="seccion-texto">Bloqueada por intentos fallidos. Se desbloquea sola, o al asignarle una nueva contraseña.</p><?php endif; ?>
     </section>
     <section class="tarjeta seccion">
       <h2>Actividad reciente</h2>

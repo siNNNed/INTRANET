@@ -1,16 +1,9 @@
-/* Login: muestra el acceso con contraseña y lo envía por AJAX. */
+/* Login: valida y envía el correo y la contraseña por AJAX. */
 (function ($) {
   'use strict';
 
-  var $form = $('#form-local');
+  var $form = $('#form-login');
   var $error = $('#login-error');
-
-  $('#mostrar-local').on('click', function () {
-    var abrir = $form.prop('hidden');
-    $form.prop('hidden', !abrir);
-    $(this).attr('aria-expanded', abrir ? 'true' : 'false');
-    if (abrir) { $('#email').trigger('focus'); }
-  });
 
   $form.on('submit', function (ev) {
     ev.preventDefault();

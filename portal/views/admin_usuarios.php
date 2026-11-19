@@ -1,5 +1,5 @@
 <?php
-/** Listado de usuarios. Variables: $filas, $filtros, $sistemas, $perfiles, $dominios, $flash. */
+/** Listado de usuarios. Variables: $filas, $filtros, $sistemas, $perfiles, $flash. */
 use Intranet\View;
 
 $opcion = static function (string $valor, string $texto, string $actual): string {
@@ -47,7 +47,7 @@ $hayFiltros = $filtros['q'] !== '' || $filtros['sistema'] !== '' || $filtros['pe
 
 <section class="tarjeta" style="overflow: hidden">
   <div class="tarjeta-cabecera">
-    <span class="text-secondary" style="font-size: 13px"><strong style="color: var(--tinta)"><?= count($filas) ?></strong> usuarios<?php if ($dominios): ?> · con Google solo pueden entrar correos @<?= e(implode(' y @', $dominios)) ?><?php endif; ?></span>
+    <span class="text-secondary" style="font-size: 13px"><strong style="color: var(--tinta)"><?= count($filas) ?></strong> usuarios</span>
   </div>
   <?php if (!$filas): ?>
     <p class="vacio">No hay usuarios con estos filtros.</p>
@@ -55,13 +55,18 @@ $hayFiltros = $filtros['q'] !== '' || $filtros['sistema'] !== '' || $filtros['pe
   <div class="table-responsive">
     <table class="table table-sm align-middle mb-0 tabla">
       <thead class="table-light">
-        <tr><th class="ps-3">Usuario</th><th>Ingreso</th><th>Cargo</th><th>Accesos</th><th>Último ingreso</th><th>Estado</th><th class="pe-3 text-end">Acciones</th></tr>
+        <tr><th class="ps-3">Usuario</th><th>Contraseña</th><th>Cargo</th><th>Accesos</th><th>Último ingreso</th><th>Estado</th><th class="pe-3 text-end">Acciones</th></tr>
       </thead>
       <tbody>
         <?php foreach ($filas as $f): ?>
           <tr>
             <td class="ps-3"><strong><?= e($f['Nombre']) ?></strong><br><span class="text-secondary"><?= e($f['Email']) ?></span></td>
-            <td><?= $f['MetodoAcceso'] === 'GOOGLE' ? '<span class="chip chip-google">Google</span>' : '<span class="chip chip-gris">Local</span>' ?></td>
+            <td>
+              <?php if ((int) $f['SinClave'] === 1): ?><span class="chip chip-error">Sin contraseña</span>
+              <?php elseif ((int) $f['Bloqueado'] === 1): ?><span class="chip chip-error">Bloqueada</span>
+              <?php elseif ((int) $f['DebeCambiarPassword'] === 1): ?><span class="chip chip-aviso">Debe cambiarla</span>
+              <?php else: ?><span class="chip chip-gris">Asignada</span><?php endif; ?>
+            </td>
             <td class="text-secondary"><?= e($f['Cargo'] ?? '—') ?></td>
             <td>
               <?php if ($f['accesos']): foreach ($f['accesos'] as $a): ?>

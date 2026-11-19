@@ -32,7 +32,7 @@ final class Auth
             'path'     => '/',
             'secure'   => (bool) $secure,
             'httponly' => true,
-            'samesite' => 'Lax',         // Lax permite volver desde Google con la sesión
+            'samesite' => 'Lax',
         ]);
         session_start();
 
@@ -51,13 +51,23 @@ final class Auth
         return $_SESSION['usuario'] ?? null;
     }
 
-    /** Exige sesión y que la cuenta siga activa. Sin sesión: 401 (AJAX) o al login. */
-    public static function requireLogin(): array
+    /**
+     * Exige sesión y que la cuenta siga activa. Sin sesión: 401 (AJAX) o al login.
+     * Si la persona debe cambiar su contraseña, solo la deja en esa página
+     * ($paraCambiarClave = true la usan cambiar_clave.php y su endpoint).
+     */
+    public static function requireLogin(bool $paraCambiarClave = false): array
     {
         $usuario = self::usuario();
         if ($usuario !== null) {
             $activo = Db::valor('SELECT Activo FROM seg.Usuarios WHERE UsuarioId = ?', [$usuario['id']]);
             if ((int) $activo === 1) {
+                if (!empty($usuario['debe_cambiar']) && !$paraCambiarClave) {
+                    if (Http::esAjax()) {
+                        Json::error('DEBE_CAMBIAR_CLAVE', 'Debe cambiar su contraseña antes de continuar.', 403);
+                    }
+                    Http::redirigir(View::url('INTRANET', 'cambiar_clave.php'));
+                }
                 return $usuario;
             }
             self::cerrarSesion();
@@ -125,15 +135,15 @@ final class Auth
         exit;
     }
 
-    /** Deja al usuario con sesión iniciada (después de validar Google o la contraseña). */
-    public static function iniciarComo(array $fila, string $metodo): void
+    /** Deja al usuario con sesión iniciada (después de validar su contraseña). */
+    public static function iniciarComo(array $fila): void
     {
         session_regenerate_id(true);
         $_SESSION['usuario'] = [
-            'id'     => (int) $fila['UsuarioId'],
-            'nombre' => (string) $fila['Nombre'],
-            'email'  => (string) $fila['Email'],
-            'metodo' => $metodo,
+            'id'           => (int) $fila['UsuarioId'],
+            'nombre'       => (string) $fila['Nombre'],
+            'email'        => (string) $fila['Email'],
+            'debe_cambiar' => (int) ($fila['DebeCambiarPassword'] ?? 0) === 1,
         ];
         $_SESSION['ultima_actividad'] = time();
         unset($_SESSION['csrf']);
@@ -144,7 +154,7 @@ final class Auth
               WHERE UsuarioId = ?',
             [$fila['UsuarioId']]
         );
-        Bitacora::registrar('LOGIN_OK', 'INTRANET', 'Usuario', (int) $fila['UsuarioId'], ['metodo' => $metodo]);
+        Bitacora::registrar('LOGIN_OK', 'INTRANET', 'Usuario', (int) $fila['UsuarioId']);
     }
 
     /** Cierra la sesión y deja una nueva vacía (para mensajes flash). */

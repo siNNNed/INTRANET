@@ -11,16 +11,6 @@ final class Validator
         return mb_strlen($valor) <= 150 && filter_var($valor, FILTER_VALIDATE_EMAIL) !== false;
     }
 
-    /** Correo de uno de los dominios indicados. */
-    public static function emailDeDominio(string $valor, array $dominios): bool
-    {
-        if (!self::email($valor)) {
-            return false;
-        }
-        $dominio = strtolower(substr(strrchr($valor, '@') ?: '', 1));
-        return in_array($dominio, $dominios, true);
-    }
-
     /** Normaliza un RUT a 12345678-K. Devuelve null si el formato no sirve. */
     public static function normalizarRut(string $valor): ?string
     {

@@ -35,14 +35,4 @@ return [
         'minutos' => 30,          // cierre por inactividad
         'secure'  => null,        // null = automático (Secure cuando se entra por HTTPS); true en producción
     ],
-
-    // Credenciales OAuth de Google Cloud (tipo "Aplicación web").
-    // Mientras estén vacías, el botón de Google aparece deshabilitado y se usa la cuenta LOCAL.
-    'google' => [
-        'client_id'     => '',
-        'client_secret' => '',
-        'redirect_uri'  => 'https://intranet.nissui.cl/intranet/auth/callback.php',
-        // Certificados raíz para cURL. XAMPP trae uno; ajuste la ruta si no existe.
-        'ca_bundle'     => 'C:/xampp/apache/bin/curl-ca-bundle.crt',
-    ],
 ];

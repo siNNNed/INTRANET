@@ -56,7 +56,7 @@ a:hover { color: var(--acento-oscuro); }
 .app-usuario-texto strong { color: #fff; font-size: 13px; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .app-usuario-texto small { color: #9aa3b5; font-size: 12px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .app-usuario form { margin: 0; }
-.app-salir { width: 32px; height: 32px; border: 0; border-radius: 8px; background: transparent; color: #c3cad9; display: flex; align-items: center; justify-content: center; }
+.app-salir { width: 32px; height: 32px; flex: 0 0 32px; text-decoration: none; border: 0; border-radius: 8px; background: transparent; color: #c3cad9; display: flex; align-items: center; justify-content: center; }
 .app-salir:hover { background: var(--azul-noche-3); color: #fff; }
 
 /* ---------- Cabecera ---------- */
@@ -108,12 +108,7 @@ a:hover { color: var(--acento-oscuro); }
 .login-caja { width: 100%; max-width: 400px; display: flex; flex-direction: column; gap: 20px; }
 .login-caja h2 { margin: 0; font-size: 26px; font-weight: 700; letter-spacing: -.01em; }
 .login-caja .bajada { margin: 6px 0 0; font-size: 14px; color: var(--texto-2); }
-.btn-google { height: 48px; justify-content: center; font-size: 15px; font-weight: 600; background: #fff; border: 1px solid #d1d5db; color: var(--tinta); box-shadow: var(--sombra); }
-.btn-google:hover { background: #f9fafb; color: var(--tinta); }
-.btn-google[aria-disabled="true"] { opacity: .55; pointer-events: none; }
-.login-separador { display: flex; align-items: center; gap: 12px; color: var(--texto-3); font-size: 12px; }
-.login-separador::before, .login-separador::after { content: ""; flex: 1 1 auto; height: 1px; background: var(--borde); }
-.login-enlace-local { font-size: 13px; color: var(--texto-2); text-align: center; background: none; border: 0; text-decoration: underline; }
+.login-ayuda { margin: 0; font-size: 13px; color: var(--texto-2); text-align: center; line-height: 1.5; }
 
 /* ---------- Portada ---------- */
 .hero { position: relative; overflow: hidden; border-radius: 16px; background: var(--azul-noche); color: #fff; padding: 36px 40px; min-height: 230px; display: flex; flex-wrap: wrap; gap: 28px; align-items: flex-end; justify-content: space-between; }
@@ -191,7 +186,8 @@ a:hover { color: var(--acento-oscuro); }
 .tabla td, .tabla th { padding-top: 10px; padding-bottom: 10px; }
 .btn-icono { width: 32px; height: 32px; display: inline-flex; align-items: center; justify-content: center; border: 1px solid var(--borde); border-radius: 8px; color: var(--texto-2); background: #fff; text-decoration: none; }
 .btn-icono:hover { color: var(--acento); border-color: #c7d2fe; }
-.chip-google { background: #eef2ff; color: #1e40af; }
+.chip-aviso { background: #fff7ed; color: #9a3412; }
+.chip-error { background: #fef2f2; color: #991b1b; }
 .chip-ok { background: #e6f6ec; color: #166534; }
 .alerta-ok { background: #f0fdf4; border: 1px solid #bbf7d0; color: #166534; }
 

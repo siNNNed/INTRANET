@@ -19,12 +19,12 @@ C:\xampp\htdocs\INTRANET\
 ├── CLAUDE.md
 ├── config\          config.php (BD, SMTP, rutas) — fuera del repositorio y del navegador
 ├── comun\           código compartido por todos los sistemas
-│   ├── src\         bootstrap.php y clases Intranet\* (Db, Auth, Csrf, Json, Http, View, Portal, GoogleOidc, Bitacora, Parametros, Validator)
+│   ├── src\         bootstrap.php y clases Intranet\* (Db, Auth, Csrf, Json, Http, View, Portal, Usuarios, Bitacora, Parametros, Validator)
 │   ├── views\       layout.php (menú lateral + cabecera), sin_perfil.php, error.php
 │   └── assets\      css y js comunes (estilo, validaciones, helper AJAX)
 ├── apache\          intranet.conf (alias y permisos; se incluye desde httpd.conf)
 ├── portal\
-│   ├── public\      login, auth\ (Google), api\, portada, sin_perfil, logout, admin\
+│   ├── public\      login, cambiar_clave, api\, portada, sin_perfil, logout, admin\
 │   └── views\       vistas del portal
 ├── egresos\
 │   ├── public\      páginas, api\, assets\ propios de Egresos
@@ -49,7 +49,7 @@ Cada sistema nuevo se agrega como carpeta hermana de `egresos\`, con su `public\
 
 ## Seguridad: usuarios, perfiles y accesos
 
-- **Una cuenta por persona** para toda la intranet (`seg.Usuarios`). La gran mayoría son cuentas `GOOGLE` (ver abajo), sin contraseña en la intranet; solo existe una cuenta `LOCAL` de emergencia para administradores.
+- **Una cuenta por persona** para toda la intranet (`seg.Usuarios`). Se ingresa con **correo y contraseña** guardados en la base (sin Google ni otro proveedor externo).
 - **Perfiles por sistema** (`seg.Perfiles`). Egresos: ADMIN, APROBADOR, DIGITADOR, TESORERIA, CONSULTA. Administración de la intranet: ADMIN.
 - **Acceso individual**: `seg.UsuarioPerfiles` asigna como máximo un perfil por usuario y sistema, con vencimiento opcional (`VigenteHasta`). Sin fila = sin acceso.
 - **Sesión única** de la intranet: cookie `INTRANET_SID`, `path=/`, `HttpOnly`, `Secure`, `SameSite=Lax`; `session_regenerate_id(true)` al iniciar sesión; expira por inactividad (`seg.Parametros.SESION_MINUTOS`). El login está solo en el portal; cerrar sesión sale de todos los sistemas.
@@ -58,18 +58,16 @@ Cada sistema nuevo se agrega como carpeta hermana de `egresos\`, con su `public\
   - página: respuesta 403 con el mensaje **"Usted no tiene el perfil para este sistema"** y un botón para volver a la portada;
   - endpoint AJAX: HTTP 403 con `{"ok":false,"error":{"codigo":"SIN_PERFIL","mensaje":"Usted no tiene el perfil para este sistema"}}`.
 - Dentro del sistema, `Auth::requirePerfil('EGRESOS', ['DIGITADOR','ADMIN'])` limita cada acción, y en egresos también se verifica por fila.
-- Intentos de login con contraseña (solo cuentas LOCAL): bloqueo tras `LOGIN_MAX_INTENTOS` (5) por `LOGIN_MINUTOS_BLOQUEO` (15). Todo inicio de sesión, rechazo por perfil y cambio de accesos queda en `seg.Bitacora`.
+- Intentos de login fallidos: bloqueo tras `LOGIN_MAX_INTENTOS` (5) por `LOGIN_MINUTOS_BLOQUEO` (15). Todo inicio de sesión, rechazo por perfil y cambio de accesos queda en `seg.Bitacora`.
 
-## Inicio de sesión con Google Workspace
+## Inicio de sesión y contraseñas
 
-- Las personas entran con su cuenta de Google Workspace de los dominios en `seg.Parametros.GOOGLE_DOMINIOS` (`nissui.cl,yadran.cl`). Google confirma quién es; la intranet decide si entra y con qué perfil.
-- Flujo OpenID Connect con código de autorización en el servidor: `state` y `nonce` guardados en la sesión, PKCE, scopes `openid email profile` (nada más). Client ID y Client Secret en `config.php`, nunca en la base ni en el repositorio.
-- Al volver de Google, `comun/src/GoogleOidc.php` canjea el código directamente con el endpoint de tokens de Google por HTTPS (certificado verificado) y valida el ID token: `iss`, `aud` = nuestro Client ID, `exp`, `nonce`, `email_verified = true` y `hd` dentro de los dominios permitidos. Como el token llega directo de Google por TLS, no se verifica su firma (lo permite la especificación OpenID Connect). El parámetro `hd` de la URL de autorización es solo una sugerencia: la validación real es el claim `hd` del token.
-- Después busca el correo en `seg.Usuarios` con `MetodoAcceso = 'GOOGLE'` y `Activo = 1`. Si no existe o está inactivo: "Su cuenta no está habilitada en la intranet. Contacte al administrador." No se crean usuarios automáticamente: el administrador los crea antes y les asigna perfiles.
-- En el primer ingreso se guarda `GoogleSub`; en los siguientes se exige que coincida (protege si un correo se reasigna a otra persona).
-- Botón de Google según sus pautas de marca oficiales. Debajo, un enlace discreto "Acceso con contraseña (solo administradores)" para la cuenta LOCAL de emergencia.
-- Requisitos de Google: la URL de retorno debe ser HTTPS, con un nombre de dominio público (no una IP ni `.local`), por ejemplo `https://intranet.nissui.cl/intranet/auth/callback.php`. Puede resolverse solo en el DNS interno, pero necesita un certificado válido.
-- Sin librerías externas: solo cURL de PHP. Si cURL no encuentra los certificados raíz, configure `google.ca_bundle` en `config.php`.
+- Login en `/intranet/login.php` (correo + contraseña) → `api/auth/login.php`. Mensaje genérico "Correo o contraseña incorrectos." para no revelar qué correos existen.
+- El administrador crea cada cuenta en `/intranet/admin/` con una **contraseña inicial** y, por defecto, `DebeCambiarPassword = 1`. Si olvidan la contraseña, el administrador les asigna otra (también desbloquea la cuenta).
+- Con `DebeCambiarPassword = 1`, `Auth::requireLogin()` solo permite `cambiar_clave.php` (página → redirige; AJAX → 403 `DEBE_CAMBIAR_CLAVE`).
+- `cambiar_clave.php` + `api/auth/cambiar_clave.php`: pide la actual, la nueva (distinta) y su repetición; regenera el id de sesión. Enlace con ícono de llave en el menú lateral.
+- `PasswordHash` NULL = cuenta sin contraseña: no puede entrar hasta que el administrador le asigne una.
+- El propio administrador cambia su contraseña solo en "Cambiar contraseña", no desde la edición de usuarios.
 
 ## Reglas de código (obligatorias)
 
@@ -120,14 +118,14 @@ Nunca usar la versión blanca sobre fondo claro.
 
 ## Estado actual
 
-- Etapa 1 (base del portal) generada: login con Google (OIDC + PKCE, sin librerías) y LOCAL, portada con sistemas, pendientes y comunicados, sin_perfil, logout, listado de usuarios en modo lectura (`/intranet/admin/`) y entrada provisional de Egresos.
-- Administración de usuarios lista: `/intranet/admin/` (listado con filtros) y `admin/usuario.php` (crear/editar, accesos por sistema con vencimiento, actividad desde la bitácora); guarda `api/usuarios/guardar.php` con la lógica en `comun/src/Usuarios.php`. Un administrador no puede desactivarse, cambiar su forma de ingreso ni quitarse ADMIN de la intranet. Cambiar el correo borra `GoogleSub`.
-- Pendiente de la etapa 1: mantenedores de cargos y departamentos; publicar comunicados; cambio de contraseña de la cuenta LOCAL.
+- Etapa 1 (base del portal) generada: login con correo y contraseña, cambio de contraseña (obligatorio en el primer ingreso), portada con sistemas, pendientes y comunicados, sin_perfil, logout y entrada provisional de Egresos. Se descartó el inicio con Google (versión 3.1 del esquema; `sql/migracion_3_1_sin_google.sql` para bases creadas con la 3.0).
+- Administración de usuarios lista: `/intranet/admin/` (listado con filtros) y `admin/usuario.php` (crear/editar, accesos por sistema con vencimiento, actividad desde la bitácora); guarda `api/usuarios/guardar.php` con la lógica en `comun/src/Usuarios.php`. Un administrador no puede desactivarse ni quitarse ADMIN de la intranet.
+- Pendiente de la etapa 1: mantenedores de cargos y departamentos; publicar comunicados.
 - Nuevas páginas: `require dirname(__DIR__, N) . '/comun/src/bootstrap.php';`, luego `Auth::requireSistema('CODIGO')` y `View::render(vista, [...])`.
 
 ## Plan por etapas
 
-1. Base común y portal: `config.php`, conexión, inicio de sesión con Google Workspace (y cuenta LOCAL de emergencia), sesión de la intranet, portada con todos los sistemas, página "sin perfil", administración de usuarios, cargos, departamentos y accesos por sistema.
+1. Base común y portal: `config.php`, conexión, inicio de sesión con correo y contraseña, sesión de la intranet, portada con todos los sistemas, página "sin perfil", administración de usuarios, cargos, departamentos y accesos por sistema.
 2. Egresos: layout con menú según perfil y mantenedores.
 3. Monedas y tipos de cambio.
 4. Registro de egresos.

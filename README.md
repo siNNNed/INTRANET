@@ -8,7 +8,7 @@ Hay una base por sistema: `Intranet` (usuarios, perfiles y accesos, esquema `seg
 (todo lo de egresos, esquema `egr`). Egresos lee los usuarios de Intranet mediante sinónimos.
 
 1. En SQL Server Management Studio ejecute, **en este orden**:
-   1. `sql\intranet_schema.sql` (versión 3.0). Crea la base `Intranet`.
+   1. `sql\intranet_schema.sql` (versión 3.1). Crea la base `Intranet`.
    2. `sql\egresos_schema.sql` (versión 3.0). Crea la base `Egresos`. Si `Intranet` no existe, se detiene sin crear nada.
 
    Si ejecutó una versión anterior, borre antes las bases `Intranet` y `Egresos`; todavía no tienen datos.
@@ -47,7 +47,7 @@ Copy-Item config\config.example.php config\config.php
 notepad config\config.php
 ```
 
-Complete al menos `db.pass` con la contraseña de `intranet_app` (sirve para las dos bases; los nombres están en `db.bases`). Deje `google` vacío por ahora.
+Complete al menos `db.pass` con la contraseña de `intranet_app` (sirve para las dos bases; los nombres están en `db.bases`).
 
 ## 3. Apache
 
@@ -61,40 +61,36 @@ Complete al menos `db.pass` con la contraseña de `intranet_app` (sirve para las
 3. Reinicie Apache desde el panel de XAMPP (Stop y Start). Si no arranca, revise
    `C:\xampp\apache\logs\error.log`.
 
-## 4. Cuenta de emergencia (administrador)
+## 4. Primer administrador
 
 ```powershell
 cd C:\xampp\htdocs\INTRANET
 C:\xampp\php\php.exe sql\crear_admin.php
 ```
 
-Use un correo de la empresa y una contraseña de al menos 10 caracteres con letras y números.
-Esta cuenta tiene perfil de administrador en la intranet y en Egresos.
+Use su correo y una contraseña de al menos 10 caracteres con letras y números.
+Esta cuenta tiene perfil de administrador en la intranet y en Egresos. Las demás personas se crean
+desde `/intranet/admin/` con una contraseña inicial, que deberán cambiar al ingresar.
 
 ## 5. Probar
 
 | Dirección | Qué debe pasar |
 | --- | --- |
 | `http://localhost/` | Redirige a `/intranet/` y luego al login |
-| `http://localhost/intranet/login.php` | Login. Use "Acceso con contraseña" con la cuenta de emergencia |
+| `http://localhost/intranet/login.php` | Login con correo y contraseña |
 | `http://localhost/intranet/` | Portada con los sistemas y comunicados |
 | `http://localhost/egresos/` | Entrada de Egresos con su perfil |
-| `http://localhost/intranet/admin/` | Listado de usuarios (solo administradores) |
+| `http://localhost/intranet/admin/` | Usuarios y accesos (solo administradores) |
+| `http://localhost/intranet/cambiar_clave.php` | Cambio de la propia contraseña |
 | `http://localhost/INTRANET/config/config.php` | Debe responder **403 Forbidden** |
 
 Para probar el mensaje "Usted no tiene el perfil para este sistema", quite a un usuario su fila en
 `seg.UsuarioPerfiles` para EGRESOS y entre a `/egresos/`.
 
-## 6. Google Workspace (cuando esté el dominio)
+## 6. Si creó las bases con la versión 3.0 (con Google)
 
-1. En Google Cloud Console cree un proyecto, configure la pantalla de consentimiento
-   (Interna si nissui.cl y yadran.cl son la misma organización; Externa si son dos) y cree un
-   **ID de cliente OAuth** de tipo **Aplicación web**.
-2. URI de redireccionamiento autorizado: `https://<dominio-de-la-intranet>/intranet/auth/callback.php`
-   (HTTPS, con nombre de dominio público; no sirve una IP).
-3. Copie el Client ID y el Client Secret a `config\config.php` → `google`.
-4. Cree las personas en `seg.Usuarios` con `MetodoAcceso = 'GOOGLE'` y sin contraseña, y asígneles
-   perfiles en `seg.UsuarioPerfiles` (la pantalla para hacerlo llega en la próxima etapa).
+Ejecute una vez `sql\migracion_3_1_sin_google.sql` en SSMS. Quita las columnas de Google y deja sin
+contraseña a las cuentas que eran de Google: asígneles una desde `/intranet/admin/`.
 
 ## Notas
 

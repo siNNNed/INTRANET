@@ -5,16 +5,7 @@
   var $form = $('#form-usuario');
   if (!$form.length) { return; }
   var $error = $('#form-error');
-  var dominios = String($form.data('dominios') || '').split(',').filter(Boolean);
-  var localActual = String($form.data('local-actual')) === '1';
-
-  function metodo() { return $form.find('[name="metodo"]:checked').val() || $form.find('input[type="hidden"][name="metodo"]').val() || ''; }
-
-  function actualizarClave() {
-    $('#bloque-clave').prop('hidden', metodo() !== 'LOCAL');
-  }
-  $form.on('change', '[name="metodo"]', actualizarClave);
-  actualizarClave();
+  var pideClave = String($form.data('pide-clave')) === '1';
 
   /** Errores por campo: usa el contenedor data-error si existe; si no, el estándar de Intranet. */
   function mostrarErrores(campos) {
@@ -35,18 +26,13 @@
     var nombre = $.trim($('#u-nombre').val());
     var email = $.trim($('#u-email').val()).toLowerCase();
     var rut = $.trim($('#u-rut').val());
-    var m = metodo();
-    var pass = $('#u-pass').val();
+    var $pass = $('#u-pass');
+    var pass = $pass.length ? $pass.val() : '';
 
     if (!Intranet.validar.texto(nombre, 3, 100)) { c.nombre = 'Ingrese el nombre completo (3 a 100 caracteres).'; }
-    if (!Intranet.validar.email(email)) {
-      c.email = 'Ingrese un correo válido.';
-    } else if (m === 'GOOGLE' && dominios.length && !Intranet.validar.emailDeDominio(email, dominios)) {
-      c.email = 'Para ingresar con Google, el correo debe terminar en @' + dominios.join(' o @') + '.';
-    }
+    if (!Intranet.validar.email(email)) { c.email = 'Ingrese un correo válido.'; }
     if (rut !== '' && !Intranet.validar.rut(rut)) { c.rut = 'El RUT no es válido. Revise el dígito verificador.'; }
-    if (m !== 'GOOGLE' && m !== 'LOCAL') { c.metodo = 'Elija la forma de ingreso.'; }
-    if (m === 'LOCAL' && (pass !== '' || !localActual)) {
+    if ($pass.length && (pass !== '' || pideClave)) {
       if (!Intranet.validar.password(pass)) {
         c.password = 'Mínimo 10 caracteres, con letras y números.';
       } else if (pass !== $('#u-pass2').val()) {

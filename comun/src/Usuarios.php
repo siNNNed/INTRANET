@@ -63,7 +63,9 @@ final class Usuarios
         }
 
         $filas = Db::todas(
-            'SELECT u.UsuarioId, u.Nombre, u.Email, u.Rut, u.MetodoAcceso, u.Activo, u.UltimoAcceso,
+            'SELECT u.UsuarioId, u.Nombre, u.Email, u.Rut, u.Activo, u.UltimoAcceso, u.DebeCambiarPassword,
+                    CASE WHEN u.PasswordHash IS NULL THEN 1 ELSE 0 END AS SinClave,
+                    CASE WHEN u.BloqueadoHasta > SYSDATETIME() THEN 1 ELSE 0 END AS Bloqueado,
                     c.Nombre AS Cargo
                FROM seg.Usuarios u
                LEFT JOIN seg.Cargos c ON c.CargoId = u.CargoId'
@@ -92,7 +94,8 @@ final class Usuarios
     public static function obtener(int $id): ?array
     {
         return Db::fila(
-            'SELECT UsuarioId, Nombre, Email, Rut, MetodoAcceso, GoogleSub, CargoId, DepartamentoId, Activo,
+            'SELECT UsuarioId, Nombre, Email, Rut, CargoId, DepartamentoId, Activo, DebeCambiarPassword,
+                    CASE WHEN PasswordHash IS NULL THEN 1 ELSE 0 END AS SinClave,
                     UltimoAcceso, BloqueadoHasta, CreadoEn,
                     CASE WHEN BloqueadoHasta > SYSDATETIME() THEN 1 ELSE 0 END AS Bloqueado
                FROM seg.Usuarios WHERE UsuarioId = ?',
@@ -154,7 +157,9 @@ final class Usuarios
             $d = json_decode((string) ($f['Detalle'] ?? ''), true) ?: [];
             $actor = $f['Actor'] ?? 'El sistema';
             $texto = match ($f['Accion']) {
-                'LOGIN_OK'          => ($d['metodo'] ?? '') === 'LOCAL' ? 'Ingresó con contraseña' : 'Ingresó con Google',
+                'LOGIN_OK'          => 'Ingresó a la intranet',
+                'CLAVE_CAMBIADA'    => 'Cambió su contraseña',
+                'CLAVE_FALLIDA'     => 'Intentó cambiar su contraseña con la actual incorrecta',
                 'LOGIN_FALLIDO'     => 'Intento de ingreso fallido',
                 'SIN_PERFIL'        => 'Intentó entrar a ' . ($f['Sistema'] ?? 'un sistema') . ' sin perfil',
                 'SIN_PERMISO'       => 'Intentó una acción sin permiso en ' . ($f['Sistema'] ?? 'un sistema'),
@@ -175,7 +180,8 @@ final class Usuarios
 
     /**
      * Valida y guarda una cuenta con sus accesos, en una transacción.
-     * $e: id, nombre, email, rut, cargo, departamento, activo, metodo, password, password2, accesos[SistemaId][perfil|vigente].
+     * $e: id, nombre, email, rut, cargo, departamento, activo, password, password2, debe_cambiar,
+     *     accesos[SistemaId][perfil|vigente].
      * Devuelve ['id' => int, 'creado' => bool]. Errores de validación: Json::error (400) o conflicto (409).
      */
     public static function guardar(array $e, int $adminId): array
@@ -193,8 +199,8 @@ final class Usuarios
         $cargo  = (string) ($e['cargo'] ?? '');
         $depto  = (string) ($e['departamento'] ?? '');
         $activo = (string) ($e['activo'] ?? '0') === '1' ? 1 : 0;
-        $metodo = (string) ($e['metodo'] ?? '');
         $pass   = (string) ($e['password'] ?? '');
+        $debeCambiar = (string) ($e['debe_cambiar'] ?? '0') === '1' ? 1 : 0;
         $pass2  = (string) ($e['password2'] ?? '');
         $entrada = is_array($e['accesos'] ?? null) ? $e['accesos'] : [];
 
@@ -202,15 +208,8 @@ final class Usuarios
         if (!Validator::texto($nombre, 3, 100)) {
             $campos['nombre'] = 'Ingrese el nombre completo (3 a 100 caracteres).';
         }
-        if (!in_array($metodo, ['GOOGLE', 'LOCAL'], true)) {
-            $campos['metodo'] = 'Elija la forma de ingreso.';
-            $metodo = 'GOOGLE';
-        }
-        $dominios = Parametros::dominiosGoogle();
         if (!Validator::email($email)) {
             $campos['email'] = 'Ingrese un correo válido.';
-        } elseif ($metodo === 'GOOGLE' && !Validator::emailDeDominio($email, $dominios)) {
-            $campos['email'] = 'Para ingresar con Google, el correo debe terminar en @' . implode(' o @', $dominios) . '.';
         }
         $rut = null;
         if ($rutIn !== '') {
@@ -223,10 +222,12 @@ final class Usuarios
         $cargoId = self::idDeCatalogo('Cargos', $cargo, $actual['CargoId'] ?? null, $campos, 'cargo');
         $deptoId = self::idDeCatalogo('Departamentos', $depto, $actual['DepartamentoId'] ?? null, $campos, 'departamento');
 
-        // Contraseña: obligatoria al crear una cuenta LOCAL o al pasar de GOOGLE a LOCAL.
-        $pideClave = $metodo === 'LOCAL' && ($actual === null || $actual['MetodoAcceso'] !== 'LOCAL');
+        // Contraseña: obligatoria al crear la cuenta o si no tiene una. La propia se cambia en cambiar_clave.php.
+        $pideClave = $actual === null || (int) $actual['SinClave'] === 1;
         $hash = null;
-        if ($metodo === 'LOCAL' && ($pass !== '' || $pideClave)) {
+        if ($esPropia && $pass !== '') {
+            $campos['password'] = 'Su propia contraseña se cambia en "Cambiar contraseña".';
+        } elseif ($pass !== '' || $pideClave) {
             if (strlen($pass) > 200 || !Validator::password($pass)) {
                 $campos['password'] = 'Mínimo 10 caracteres, con letras y números.';
             } elseif (!hash_equals($pass, $pass2)) {
@@ -274,9 +275,6 @@ final class Usuarios
             if ($activo !== 1) {
                 $campos['activo'] = 'No puede desactivar su propia cuenta.';
             }
-            if ($metodo !== $actual['MetodoAcceso']) {
-                $campos['metodo'] = 'No puede cambiar la forma de ingreso de su propia cuenta.';
-            }
             foreach ($sistemas as $sid => $s) {
                 if ($s['Codigo'] !== 'INTRANET') {
                     continue;
@@ -308,17 +306,17 @@ final class Usuarios
         try {
             if ($actual === null) {
                 $stmt = $pdo->prepare(
-                    'INSERT INTO seg.Usuarios (Nombre, Email, Rut, MetodoAcceso, PasswordHash, CargoId, DepartamentoId, Activo, DebeCambiarPassword, CreadoPor)
+                    'INSERT INTO seg.Usuarios (Nombre, Email, Rut, PasswordHash, CargoId, DepartamentoId, Activo, DebeCambiarPassword, CreadoPor)
                      OUTPUT INSERTED.UsuarioId
-                     VALUES (?, ?, ?, ?, ?, ?, ?, ?, 0, ?)'
+                     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)'
                 );
-                $stmt->execute([$nombre, $email, $rut, $metodo, $metodo === 'LOCAL' ? $hash : null, $cargoId, $deptoId, $activo, $adminId]);
+                $stmt->execute([$nombre, $email, $rut, $hash, $cargoId, $deptoId, $activo, $debeCambiar, $adminId]);
                 $id = (int) $stmt->fetchColumn();
                 $stmt->closeCursor();
-                Bitacora::registrar('USUARIO_CREADO', 'INTRANET', 'Usuario', $id, ['email' => $email, 'metodo' => $metodo]);
+                Bitacora::registrar('USUARIO_CREADO', 'INTRANET', 'Usuario', $id, ['email' => $email]);
             } else {
                 $cambios = [];
-                foreach (['Nombre' => $nombre, 'Email' => $email, 'Rut' => $rut, 'MetodoAcceso' => $metodo] as $col => $valor) {
+                foreach (['Nombre' => $nombre, 'Email' => $email, 'Rut' => $rut] as $col => $valor) {
                     if ((string) ($actual[$col] ?? '') !== (string) ($valor ?? '')) {
                         $cambios[] = $col;
                     }
@@ -331,23 +329,21 @@ final class Usuarios
                 if ($hash !== null) {
                     $cambios[] = 'Contraseña';
                 }
-                $cambioCorreo = $actual['Email'] !== $email;
                 Db::ejecutar(
                     'UPDATE seg.Usuarios
-                        SET Nombre = ?, Email = ?, Rut = ?, MetodoAcceso = ?, CargoId = ?, DepartamentoId = ?, Activo = ?,
-                            PasswordHash = CASE WHEN ? = \'GOOGLE\' THEN NULL WHEN ? IS NOT NULL THEN ? ELSE PasswordHash END,
-                            IntentosFallidos = CASE WHEN ? IS NOT NULL OR ? = \'GOOGLE\' THEN 0 ELSE IntentosFallidos END,
-                            BloqueadoHasta   = CASE WHEN ? IS NOT NULL OR ? = \'GOOGLE\' THEN NULL ELSE BloqueadoHasta END,
-                            GoogleSub        = CASE WHEN ? = 1 THEN NULL ELSE GoogleSub END,
-                            ActualizadoEn = SYSDATETIME()
+                        SET Nombre = ?, Email = ?, Rut = ?, CargoId = ?, DepartamentoId = ?, Activo = ?, ActualizadoEn = SYSDATETIME()
                       WHERE UsuarioId = ?',
-                    [$nombre, $email, $rut, $metodo, $cargoId, $deptoId, $activo,
-                     $metodo, $hash, $hash,
-                     $hash, $metodo,
-                     $hash, $metodo,
-                     $cambioCorreo ? 1 : 0,
-                     $id]
+                    [$nombre, $email, $rut, $cargoId, $deptoId, $activo, $id]
                 );
+                if ($hash !== null) {
+                    // Nueva contraseña asignada por el administrador: desbloquea la cuenta.
+                    Db::ejecutar(
+                        'UPDATE seg.Usuarios
+                            SET PasswordHash = ?, DebeCambiarPassword = ?, IntentosFallidos = 0, BloqueadoHasta = NULL
+                          WHERE UsuarioId = ?',
+                        [$hash, $debeCambiar, $id]
+                    );
+                }
                 if ($cambios) {
                     Bitacora::registrar('USUARIO_EDITADO', 'INTRANET', 'Usuario', $id, ['campos' => $cambios]);
                 }

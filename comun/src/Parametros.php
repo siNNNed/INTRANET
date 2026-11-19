@@ -25,11 +25,4 @@ final class Parametros
         $valor = self::get($clave);
         return ($valor !== null && ctype_digit($valor)) ? (int) $valor : $porDefecto;
     }
-
-    /** Dominios permitidos para Google, en minúsculas. */
-    public static function dominiosGoogle(): array
-    {
-        $lista = array_map('trim', explode(',', (string) self::get('GOOGLE_DOMINIOS', '')));
-        return array_values(array_filter(array_map('strtolower', $lista)));
-    }
 }

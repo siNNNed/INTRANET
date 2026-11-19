@@ -3,7 +3,6 @@
 require dirname(__DIR__, 3) . '/comun/src/bootstrap.php';
 
 use Intranet\Auth;
-use Intranet\Parametros;
 use Intranet\Portal;
 use Intranet\Usuarios;
 use Intranet\View;
@@ -32,7 +31,6 @@ View::render(dirname(__DIR__, 2) . '/views/admin_usuario_editar.php', [
     'sistemas'      => Usuarios::sistemasConPerfiles($accesos),
     'cargos'        => Usuarios::catalogo('Cargos', $u['CargoId'] ?? null),
     'departamentos' => Usuarios::catalogo('Departamentos', $u['DepartamentoId'] ?? null),
-    'dominios'      => Parametros::dominiosGoogle(),
     'actividad'     => $u ? Usuarios::actividad($id) : [],
     'scripts'       => [View::url('INTRANET', 'assets/admin_usuario.js')],
 ]);

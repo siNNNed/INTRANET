@@ -1,7 +1,7 @@
 /* =====================================================================
    INTRANET — Base de datos común de la intranet
    Motor: SQL Server 2016 SP1 o superior (probado para 2019)
-   Versión: 3.0 (2026-11-19) — una base por sistema
+   Versión: 3.1 (2026-11-19) — ingreso solo con correo y contraseña
 
    Base Intranet, esquema seg: seguridad común a todos los sistemas
    (usuarios, sistemas, perfiles por sistema, accesos, cargos,
@@ -53,17 +53,15 @@ CREATE TABLE seg.Departamentos (
 GO
 
 /* Una cuenta por persona para toda la intranet. Los accesos van en seg.UsuarioPerfiles.
-   GOOGLE: entra con su cuenta de Google Workspace (dominios en GOOGLE_DOMINIOS); el
-           administrador la crea antes con su correo y la intranet no guarda contraseña.
-   LOCAL:  cuenta de emergencia con contraseña, solo para administradores. */
+   Se ingresa con correo y contraseña (password_hash() de PHP). El administrador crea la
+   cuenta con una contraseña inicial y, por defecto, la persona debe cambiarla al entrar.
+   PasswordHash NULL = cuenta sin contraseña asignada: no puede ingresar. */
 CREATE TABLE seg.Usuarios (
     UsuarioId           INT IDENTITY(1,1) NOT NULL CONSTRAINT PK_Usuarios PRIMARY KEY,
     Rut                 VARCHAR(10)    NULL,                   -- 12345678-K
     Nombre              NVARCHAR(100)  NOT NULL,
     Email               NVARCHAR(150)  NOT NULL,
-    MetodoAcceso        VARCHAR(10)    NOT NULL CONSTRAINT DF_Usuarios_Metodo DEFAULT ('GOOGLE'),  -- GOOGLE o LOCAL
-    GoogleSub           VARCHAR(64)    NULL,                   -- id de Google ('sub' del token); se guarda en el primer ingreso
-    PasswordHash        VARCHAR(255)   NULL,                   -- solo cuentas LOCAL: password_hash() de PHP
+    PasswordHash        VARCHAR(255)   NULL,                   -- password_hash() de PHP
     CargoId             SMALLINT       NULL CONSTRAINT FK_Usuarios_Cargos REFERENCES seg.Cargos (CargoId),
     DepartamentoId      SMALLINT       NULL CONSTRAINT FK_Usuarios_Departamentos REFERENCES seg.Departamentos (DepartamentoId),
     Activo              BIT            NOT NULL CONSTRAINT DF_Usuarios_Activo DEFAULT (1),
@@ -75,16 +73,10 @@ CREATE TABLE seg.Usuarios (
     CreadoPor           INT            NULL,
     ActualizadoEn       DATETIME2(0)   NULL,
     CONSTRAINT UQ_Usuarios_Email UNIQUE (Email),
-    CONSTRAINT CK_Usuarios_Rut CHECK (Rut IS NULL OR Rut LIKE '%[0-9]-[0-9K]'),
-    CONSTRAINT CK_Usuarios_Metodo CHECK (MetodoAcceso IN ('GOOGLE', 'LOCAL')),
-    -- una cuenta LOCAL necesita contraseña; una cuenta GOOGLE nunca guarda contraseña
-    CONSTRAINT CK_Usuarios_Password CHECK (
-        (MetodoAcceso = 'LOCAL'  AND PasswordHash IS NOT NULL) OR
-        (MetodoAcceso = 'GOOGLE' AND PasswordHash IS NULL))
+    CONSTRAINT CK_Usuarios_Rut CHECK (Rut IS NULL OR Rut LIKE '%[0-9]-[0-9K]')
 );
 GO
 CREATE UNIQUE INDEX UX_Usuarios_Rut ON seg.Usuarios (Rut) WHERE Rut IS NOT NULL;
-CREATE UNIQUE INDEX UX_Usuarios_GoogleSub ON seg.Usuarios (GoogleSub) WHERE GoogleSub IS NOT NULL;
 GO
 
 ALTER TABLE seg.Departamentos
@@ -177,8 +169,7 @@ INSERT INTO seg.Parametros (Clave, Valor, Descripcion) VALUES
     ('EMPRESA_LOGO',          N'/intranet-assets/img/logo_oscuro_256.png', N'Logo para fondos claros (PDF, correos)'),
     ('LOGIN_MAX_INTENTOS',    N'5',  N'Intentos antes de bloquear'),
     ('LOGIN_MINUTOS_BLOQUEO', N'15', N'Minutos de bloqueo'),
-    ('SESION_MINUTOS',        N'30', N'Minutos de inactividad antes de cerrar la sesión'),
-    ('GOOGLE_DOMINIOS',       N'nissui.cl,yadran.cl', N'Dominios de Google Workspace que pueden iniciar sesión');
+    ('SESION_MINUTOS',        N'30', N'Minutos de inactividad antes de cerrar la sesión');
 GO
 
 /* Comunicados internos que se muestran en la portada. */
@@ -200,7 +191,7 @@ GO
 
 INSERT INTO seg.Comunicados (Categoria, Titulo, Resumen, Destacado) VALUES
     (N'Intranet', N'Nueva intranet corporativa',
-     N'Ahora entra con su cuenta de Google de la empresa. Si no ve un sistema, solicite acceso a TI.', 1);
+     N'Ingrese con su correo y la contraseña que le entregó el administrador. Si no ve un sistema, solicite acceso a TI.', 1);
 GO
 
 /* Accesos vigentes: usuario activo + sistema activo + perfil activo + no vencido.

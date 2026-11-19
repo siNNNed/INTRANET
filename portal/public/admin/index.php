@@ -36,6 +36,5 @@ View::render(dirname(__DIR__, 2) . '/views/admin_usuarios.php', [
     'filtros'   => $filtros,
     'sistemas'  => $sistemas,
     'perfiles'  => $perfiles,
-    'dominios'  => \Intranet\Parametros::dominiosGoogle(),
     'flash'     => $flash,
 ]);

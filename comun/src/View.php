@@ -79,6 +79,7 @@ final class View
         'alert'    => '<circle cx="12" cy="12" r="9"/><path d="M12 8v5M12 16h.01"/>',
         'layers'   => '<path d="M12 3 2 8l10 5 10-5z"/><path d="m2 13 10 5 10-5"/>',
         'megaphone'=> '<path d="M3 11v2a1 1 0 0 0 1 1h3l6 4V6L7 10H4a1 1 0 0 0-1 1z"/><path d="M16.5 8.5a5 5 0 0 1 0 7"/>',
+        'key'      => '<circle cx="8" cy="15" r="4"/><path d="m10.8 12.2 8.7-8.7"/><path d="m17 6 3 3"/><path d="m14.5 8.5 2 2"/>',
         'dot'      => '<circle cx="12" cy="12" r="3"/>',
     ];
 }

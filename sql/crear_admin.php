@@ -1,9 +1,7 @@
 <?php
 /**
- * Crea la cuenta LOCAL de emergencia (con contraseña) con perfil de Administrador
- * en la administración de la intranet y en Egresos. Sirve para entrar aunque
- * falle el inicio de sesión con Google. Las demás personas se crean desde el
- * portal como cuentas GOOGLE, sin contraseña.
+ * Crea el primer administrador, con perfil de Administrador en la administración
+ * de la intranet y en Egresos. Las demás personas se crean desde /intranet/admin/.
  *
  * Uso (línea de comandos):  php sql/crear_admin.php
  * Pide nombre, correo y contraseña; guarda la contraseña con password_hash().
@@ -50,9 +48,9 @@ try {
     $pdo->beginTransaction();
 
     $stmt = $pdo->prepare(
-        'INSERT INTO seg.Usuarios (Nombre, Email, MetodoAcceso, PasswordHash, DebeCambiarPassword)
+        'INSERT INTO seg.Usuarios (Nombre, Email, PasswordHash, DebeCambiarPassword)
          OUTPUT INSERTED.UsuarioId
-         VALUES (:nombre, :email, \'LOCAL\', :hash, 0)'
+         VALUES (:nombre, :email, :hash, 0)'
     );
     $stmt->execute([
         ':nombre' => $nombre,

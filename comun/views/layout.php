@@ -62,6 +62,7 @@ if (!empty($usuario['nombre'])) {
           <strong><?= e($usuario['nombre']) ?></strong>
           <small><?= e($usuario['email']) ?></small>
         </span>
+        <a class="app-salir" href="<?= e(View::url('INTRANET', 'cambiar_clave.php')) ?>" aria-label="Cambiar contraseña" title="Cambiar contraseña"><?= View::icono('key') ?></a>
         <form method="post" action="<?= e(View::url('INTRANET', 'logout.php')) ?>">
           <input type="hidden" name="_csrf" value="<?= e($csrf) ?>">
           <button type="submit" class="app-salir" aria-label="Cerrar sesión" title="Cerrar sesión"><?= View::icono('logout') ?></button>
@@ -81,6 +82,10 @@ if (!empty($usuario['nombre'])) {
       </header>
     <?php endif; ?>
     <main class="app-contenido">
+      <?php if (!empty($_SESSION['flash_ok'])): ?>
+        <div class="alerta alerta-ok" role="status"><?= View::icono('check', 16) ?><span><?= e($_SESSION['flash_ok']) ?></span></div>
+        <?php unset($_SESSION['flash_ok']); ?>
+      <?php endif; ?>
       <?= $contenido ?>
     </main>
   </div>
