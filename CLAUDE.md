@@ -45,7 +45,7 @@ Cada sistema nuevo se agrega como carpeta hermana de `egresos\`, con su `public\
   - `/egresos`  → `C:/xampp/htdocs/INTRANET/egresos/public`
 - `Require all denied` sobre `C:/xampp/htdocs/INTRANET` (config, comun\src, sql, docs y vendor nunca accesibles desde el navegador). `comun\assets` se publica con su propio alias `/intranet-assets`.
 - La raíz `/` redirige a `/intranet`.
-- Rutas base en `config.php` (`'sistemas' => ['INTRANET' => '/intranet', 'EGRESOS' => '/egresos']`). Todo enlace, recurso y llamada AJAX se arma con esas bases; nunca rutas escritas a mano.
+- Rutas base en `config.php` (`'rutas' => ['INTRANET' => '/intranet', 'EGRESOS' => '/egresos', 'ASSETS' => '/intranet-assets']`). Todo enlace, recurso y llamada AJAX se arma con `View::url()` y `View::asset()`; nunca rutas escritas a mano.
 
 ## Seguridad: usuarios, perfiles y accesos
 
@@ -57,25 +57,25 @@ Cada sistema nuevo se agrega como carpeta hermana de `egresos\`, con su `public\
 - **Entrada a un sistema**: cada página llama `Auth::requireSistema('EGRESOS')`, que vuelve a consultar `seg.vw_AccesosUsuario` en cada petición (así un acceso revocado se corta de inmediato). Si no tiene perfil:
   - página: respuesta 403 con el mensaje **"Usted no tiene el perfil para este sistema"** y un botón para volver a la portada;
   - endpoint AJAX: HTTP 403 con `{"ok":false,"error":{"codigo":"SIN_PERFIL","mensaje":"Usted no tiene el perfil para este sistema"}}`.
-- Dentro del sistema, `Auth::requirePerfil(['DIGITADOR','ADMIN'])` limita cada acción, y en egresos también se verifica por fila.
+- Dentro del sistema, `Auth::requirePerfil('EGRESOS', ['DIGITADOR','ADMIN'])` limita cada acción, y en egresos también se verifica por fila.
 - Intentos de login con contraseña (solo cuentas LOCAL): bloqueo tras `LOGIN_MAX_INTENTOS` (5) por `LOGIN_MINUTOS_BLOQUEO` (15). Todo inicio de sesión, rechazo por perfil y cambio de accesos queda en `seg.Bitacora`.
 
 ## Inicio de sesión con Google Workspace
 
 - Las personas entran con su cuenta de Google Workspace de los dominios en `seg.Parametros.GOOGLE_DOMINIOS` (`nissui.cl,yadran.cl`). Google confirma quién es; la intranet decide si entra y con qué perfil.
 - Flujo OpenID Connect con código de autorización en el servidor: `state` y `nonce` guardados en la sesión, PKCE, scopes `openid email profile` (nada más). Client ID y Client Secret en `config.php`, nunca en la base ni en el repositorio.
-- Al volver de Google, el servidor valida el ID token: firma (claves públicas de Google), `iss`, `aud` = nuestro Client ID, `exp`, `nonce`, `email_verified = true` y `hd` dentro de los dominios permitidos. El parámetro `hd` de la URL de autorización es solo una sugerencia: la validación real es el claim `hd` del token.
+- Al volver de Google, `comun/src/GoogleOidc.php` canjea el código directamente con el endpoint de tokens de Google por HTTPS (certificado verificado) y valida el ID token: `iss`, `aud` = nuestro Client ID, `exp`, `nonce`, `email_verified = true` y `hd` dentro de los dominios permitidos. Como el token llega directo de Google por TLS, no se verifica su firma (lo permite la especificación OpenID Connect). El parámetro `hd` de la URL de autorización es solo una sugerencia: la validación real es el claim `hd` del token.
 - Después busca el correo en `seg.Usuarios` con `MetodoAcceso = 'GOOGLE'` y `Activo = 1`. Si no existe o está inactivo: "Su cuenta no está habilitada en la intranet. Contacte al administrador." No se crean usuarios automáticamente: el administrador los crea antes y les asigna perfiles.
 - En el primer ingreso se guarda `GoogleSub`; en los siguientes se exige que coincida (protege si un correo se reasigna a otra persona).
 - Botón de Google según sus pautas de marca oficiales. Debajo, un enlace discreto "Acceso con contraseña (solo administradores)" para la cuenta LOCAL de emergencia.
-- Requisitos de Google: la URL de retorno debe ser HTTPS, con un nombre de dominio público (no una IP ni `.local`), por ejemplo `https://intranet.nissui.cl/intranet/auth/google/callback.php`. Puede resolverse solo en el DNS interno, pero necesita un certificado válido.
-- Librería sugerida: `google/apiclient` (verificación del ID token) o `league/oauth2-google`.
+- Requisitos de Google: la URL de retorno debe ser HTTPS, con un nombre de dominio público (no una IP ni `.local`), por ejemplo `https://intranet.nissui.cl/intranet/auth/callback.php`. Puede resolverse solo en el DNS interno, pero necesita un certificado válido.
+- Sin librerías externas: solo cURL de PHP. Si cURL no encuentra los certificados raíz, configure `google.ca_bundle` en `config.php`.
 
 ## Reglas de código (obligatorias)
 
 - Toda consulta con sentencias preparadas de PDO y parámetros. Nunca concatenar datos del usuario en SQL; columnas de orden y filtros contra listas blancas.
 - Contraseñas con `password_hash()` / `password_verify()`, `password_needs_rehash()` al iniciar sesión. Mínimo 10 caracteres con letras y números.
-- Validar en el cliente (para guiar) y en el servidor (fuente de verdad). Reglas compartidas en `comun/src/Validator.php` y `comun/assets/js/validator.js`.
+- Validar en el cliente (para guiar) y en el servidor (fuente de verdad). Reglas compartidas en `comun/src/Validator.php` y `Intranet.validar` de `comun/assets/js/intranet.js`.
 - Token CSRF por sesión en la cabecera `X-CSRF-Token` para todo POST, comparado con `hash_equals`.
 - Salida escapada: `htmlspecialchars` en PHP, `.text()` en jQuery (nunca `.html()` con datos del usuario).
 - Montos en `DECIMAL`, nunca `float`; en PHP como texto o con `bcmath`. Fechas enviadas a SQL siempre en `AAAA-MM-DD`.
